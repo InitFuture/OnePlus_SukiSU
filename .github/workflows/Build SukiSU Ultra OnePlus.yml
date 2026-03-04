@@ -678,6 +678,42 @@ jobs:
           fi
 
 
+            # 2. Fix double-prefix bug: KSU_IOCTL(KSU_IOCTL_NEW_GET_ALLOW_LIST -> KSU_IOCTL(NEW_GET_ALLOW_LIST
+            sed -i 's/KSU_IOCTL(KSU_IOCTL_NEW_GET_ALLOW_LIST/KSU_IOCTL(NEW_GET_ALLOW_LIST/g' "$SUPERCALLS_C"
+            sed -i 's/KSU_IOCTL(KSU_IOCTL_NEW_GET_DENY_LIST/KSU_IOCTL(NEW_GET_DENY_LIST/g' "$SUPERCALLS_C"
+            echo "Fixed double-prefix ioctl bug"
+          else
+            echo "No builtin ioctl fixes needed"
+          fi
+
+
+            sed -i 's/KSU_IOCTL(KSU_IOCTL_NEW_GET_ALLOW_LIST/KSU_IOCTL(NEW_GET_ALLOW_LIST/g' "$SC"
+            sed -i 's/KSU_IOCTL(KSU_IOCTL_NEW_GET_DENY_LIST/KSU_IOCTL(NEW_GET_DENY_LIST/g' "$SC"
+            echo "Fixed double-prefix ioctl bug"
+          else
+            echo "No builtin ioctl fixes needed"
+          fi
+
+
+      - name: Fix builtin branch ioctl compile errors
+        run: |
+          cd kernel_workspace/kernel_platform
+          SC="./KernelSU/kernel/supercalls.c"
+          SH="./KernelSU/kernel/supercalls.h"
+          if [ -f "$SC" ] && grep -q "KSU_IOCTL(GET_ALLOW_LIST" "$SC"; then
+            echo "Fixing builtin branch ioctl issues..."
+            if [ -f "$SH" ] && ! grep -q "KSU_IOCTL_GET_ALLOW_LIST" "$SH"; then
+              echo '#define KSU_IOCTL_GET_ALLOW_LIST _IOWR(0x4B, 60, struct ksu_get_allow_list_cmd)' >> "$SH"
+              echo '#define KSU_IOCTL_GET_DENY_LIST _IOWR(0x4B, 61, struct ksu_get_allow_list_cmd)' >> "$SH"
+              echo "Added missing ioctl defs to supercalls.h"
+            fi
+            sed -i 's/KSU_IOCTL(KSU_IOCTL_NEW_GET_ALLOW_LIST/KSU_IOCTL(NEW_GET_ALLOW_LIST/g' "$SC"
+            sed -i 's/KSU_IOCTL(KSU_IOCTL_NEW_GET_DENY_LIST/KSU_IOCTL(NEW_GET_DENY_LIST/g' "$SC"
+            echo "Fixed double-prefix ioctl bug"
+          else
+            echo "No builtin ioctl fixes needed"
+          fi
+
       - name: Apply Patches SukiSU Ultra
         env:
           FILE: ${{ github.event.inputs.FILE }}
