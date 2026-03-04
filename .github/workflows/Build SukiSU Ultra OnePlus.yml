@@ -747,6 +747,33 @@ jobs:
           patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
           echo "susfs_patch完成"
 
+          # === Fix failed SUSFS patch hunk for fs/proc/base.c ===
+          if [ -f fs/proc/base.c ] && ! grep -q "susfs_def.h" fs/proc/base.c; then
+            echo "Manually applying failed Hunk #1 for fs/proc/base.c..."
+            python3 << 'FIXEOF'
+import os, glob
+candidates = glob.glob('**/fs/proc/base.c', recursive=True)
+if not candidates:
+    candidates = ['fs/proc/base.c']
+p = candidates[0]
+print(f'Patching: {p}')
+with open(p) as f:
+    c = f.read()
+ins = '#ifdef CONFIG_KSU_SUSFS_SUS_MAP\n#include <linux/susfs_def.h>\n#endif\n\n'
+anchor = '#include "internal.h"'
+if anchor in c:
+    c = c.replace(anchor, ins + anchor, 1)
+    with open(p, 'w') as f:
+        f.write(c)
+    print('Hunk #1 fix SUCCESS')
+else:
+    print('WARNING: anchor not found in ' + p)
+FIXEOF
+            grep -q "susfs_def.h" fs/proc/base.c && echo "Verified: susfs_def.h present" || echo "WARNING: susfs_def.h NOT found after fix"
+          else
+            echo "Hunk #1 already applied or file not found"
+          fi
+
           # Revert
           if [ "$fake_patched" = 1 ]; then
             if [ "$GKI_V" = "android15-6.6" ]; then
