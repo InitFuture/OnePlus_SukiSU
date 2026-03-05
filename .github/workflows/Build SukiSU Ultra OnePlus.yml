@@ -623,7 +623,7 @@ jobs:
         run: |
           cd kernel_workspace/kernel_platform
           KCONFIG_FILE="./KernelSU/kernel/Kconfig"
-          if [ -f "$KCONFIG_FILE" ] && \! grep -q "KSU_SUSFS" "$KCONFIG_FILE"; then
+          if [ -f "$KCONFIG_FILE" ] && ! grep -q "KSU_SUSFS" "$KCONFIG_FILE"; then
             echo "SUSFS Kconfig not found in main branch, injecting..."
             cat >> "$KCONFIG_FILE" << 'KEOF'
 
@@ -676,24 +676,6 @@ jobs:
           else
             echo "SUSFS Kconfig already present or file not found"
           fi
-
-
-            # 2. Fix double-prefix bug: KSU_IOCTL(KSU_IOCTL_NEW_GET_ALLOW_LIST -> KSU_IOCTL(NEW_GET_ALLOW_LIST
-            sed -i 's/KSU_IOCTL(KSU_IOCTL_NEW_GET_ALLOW_LIST/KSU_IOCTL(NEW_GET_ALLOW_LIST/g' "$SUPERCALLS_C"
-            sed -i 's/KSU_IOCTL(KSU_IOCTL_NEW_GET_DENY_LIST/KSU_IOCTL(NEW_GET_DENY_LIST/g' "$SUPERCALLS_C"
-            echo "Fixed double-prefix ioctl bug"
-          else
-            echo "No builtin ioctl fixes needed"
-          fi
-
-
-            sed -i 's/KSU_IOCTL(KSU_IOCTL_NEW_GET_ALLOW_LIST/KSU_IOCTL(NEW_GET_ALLOW_LIST/g' "$SC"
-            sed -i 's/KSU_IOCTL(KSU_IOCTL_NEW_GET_DENY_LIST/KSU_IOCTL(NEW_GET_DENY_LIST/g' "$SC"
-            echo "Fixed double-prefix ioctl bug"
-          else
-            echo "No builtin ioctl fixes needed"
-          fi
-
 
       - name: Fix builtin branch ioctl compile errors
         run: |
