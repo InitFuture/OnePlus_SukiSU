@@ -610,14 +610,13 @@ jobs:
             1
             END {if (!inserted) print def}
           ' kernel/Kbuild > kernel/Kbuild.tmp 2>/dev/null && mv kernel/Kbuild.tmp kernel/Kbuild || true
-          # [LD] find the driver makefile that defines the official cert hash (HASH1) and inject HASH2 into the SAME file (layout-independent)
-          KSU_HASHFILE=$(grep -rl "947ae944f3de4ed4c21a7e4f7953ecf351bfa2b36239da37a34111ad29993eef" "$GITHUB_WORKSPACE" --include=Kbuild --include=Makefile 2>/dev/null | head -1)
-          if [ -n "$KSU_HASHFILE" ] && [ -f "$KSU_HASHFILE" ]; then
-            printf '\nccflags-y += -DEXPECTED_SIZE2=0x385\n' >> "$KSU_HASHFILE"
-            printf 'ccflags-y += -DEXPECTED_HASH2=\\"910a2220477b38f84bc23eab5687496cc2c442e80ba7fb3e39c268729d172e7b\\"\n' >> "$KSU_HASHFILE"
-            echo "[LD] HASH2 appended to $KSU_HASHFILE:"; tail -3 "$KSU_HASHFILE"
+          # [LD] builtin trusts managers via apk_sign_keys[] cert array in apk_sign.c; add my custom cert entry (all official entries kept)
+          HF=$(find "$GITHUB_WORKSPACE" "$PWD" /home/runner/work -name apk_sign.c 2>/dev/null | xargs -r grep -l "947ae944f3de4ed4c21a7e4f7953ecf351bfa2b36239da37a34111ad29993eef" 2>/dev/null | head -1)
+          if [ -n "$HF" ] && [ -f "$HF" ]; then
+            sed -i '/947ae944f3de4ed4c21a7e4f7953ecf351bfa2b36239da37a34111ad29993eef/a { 0x385, "910a2220477b38f84bc23eab5687496cc2c442e80ba7fb3e39c268729d172e7b" },' "$HF"
+            echo "[LD] custom manager cert added to $HF"; grep -nE "0x385|910a2220|947ae944" "$HF" | head
           else
-            echo "[LD] ERROR: file with HASH1 (947ae944) not found under GITHUB_WORKSPACE"
+            echo "[LD] ERROR: apk_sign.c with HASH1 (947ae944) not found"
           fi
 
           KSU_VERSION=$(expr $(git rev-list --count main 2>/dev/null || echo 13000) + 37185)
