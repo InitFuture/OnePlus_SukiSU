@@ -610,11 +610,14 @@ jobs:
             1
             END {if (!inserted) print def}
           ' kernel/Kbuild > kernel/Kbuild.tmp 2>/dev/null && mv kernel/Kbuild.tmp kernel/Kbuild || true
-          # [LD] custom manager cert -> HASH2 slot (HASH1 official kept as fallback)
-          if [ -f kernel/Kbuild ]; then
-            printf '\nccflags-y += -DEXPECTED_SIZE2=0x385\n' >> kernel/Kbuild
-            printf 'ccflags-y += -DEXPECTED_HASH2=\\"910a2220477b38f84bc23eab5687496cc2c442e80ba7fb3e39c268729d172e7b\\"\n' >> kernel/Kbuild
-            echo "[LD] HASH2 appended to kernel/Kbuild:"; tail -3 kernel/Kbuild
+          # [LD] find the driver makefile that defines the official cert hash (HASH1) and inject HASH2 into the SAME file (layout-independent)
+          KSU_HASHFILE=$(grep -rl "947ae944f3de4ed4c21a7e4f7953ecf351bfa2b36239da37a34111ad29993eef" "$GITHUB_WORKSPACE" --include=Kbuild --include=Makefile 2>/dev/null | head -1)
+          if [ -n "$KSU_HASHFILE" ] && [ -f "$KSU_HASHFILE" ]; then
+            printf '\nccflags-y += -DEXPECTED_SIZE2=0x385\n' >> "$KSU_HASHFILE"
+            printf 'ccflags-y += -DEXPECTED_HASH2=\\"910a2220477b38f84bc23eab5687496cc2c442e80ba7fb3e39c268729d172e7b\\"\n' >> "$KSU_HASHFILE"
+            echo "[LD] HASH2 appended to $KSU_HASHFILE:"; tail -3 "$KSU_HASHFILE"
+          else
+            echo "[LD] ERROR: file with HASH1 (947ae944) not found under GITHUB_WORKSPACE"
           fi
 
           KSU_VERSION=$(expr $(git rev-list --count main 2>/dev/null || echo 13000) + 37185)
